@@ -48,7 +48,14 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-
+// bcrypt permet de hasher le mot de passe
+userSchema.pre("save", async function(next) {
+  const salt = await bcrypt.genSalt();
+  //là bcrypt va hasher le mot de passe
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+  //le next veut dire qu'une fois qu'il a fait le hash, il va passer à la suite
+});
 
 
 const UserModel = mongoose.model("user", userSchema);
