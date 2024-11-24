@@ -4,11 +4,11 @@ require("./config/db");
 const app = express();
 const userRoutes = require("./routes/user.routes");
 const bodyParser = require("body-parser");
-
+const cookieParser = require("cookie-parser");
 // il faut bodyparser pour pouvoir envoyer des requêtes, cela permet la data à envoyer
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
+app.use(cookieParser());
 
 //routes
 app.use("/api/user", userRoutes);
