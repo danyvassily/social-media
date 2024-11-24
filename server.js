@@ -1,18 +1,29 @@
 const express = require("express");
+const cookieParser = require("cookie-parser");
+const cors = require("cors");
 require("dotenv").config({ path: "./config/.env" });
 require("./config/db");
 const app = express();
 const userRoutes = require("./routes/user.routes");
 const bodyParser = require("body-parser");
-const cookieParser = require("cookie-parser");
-// il faut bodyparser pour pouvoir envoyer des requêtes, cela permet la data à envoyer
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+
+// Middleware
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    credentials: true,
+    allowedHeaders: ["sessionId", "Content-Type"],
+    exposedHeaders: ["sessionId"],
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    preflightContinue: false,
+  })
+);
 app.use(cookieParser());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-//routes
+// Routes
 app.use("/api/user", userRoutes);
-
 
 //serveur
 app.listen(process.env.PORT, () => {
