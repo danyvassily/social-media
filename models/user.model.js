@@ -30,19 +30,25 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "./uploads/profil/random-user.png",
     },
+    bio: {
+      type: String,
+      max: 1024,
+    },
+    isAdmin: {
+      type: Boolean,
+      default: false
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// bcrypt permet de hasher le mot de passe
+// play function before save into display: 'block',
 userSchema.pre("save", async function (next) {
   const salt = await bcrypt.genSalt();
-  //là bcrypt va hasher le mot de passe
   this.password = await bcrypt.hash(this.password, salt);
   next();
-  //le next veut dire qu'une fois qu'il a fait le hash, il va passer à la suite
 });
 
 userSchema.statics.login = async function (email, password) {
@@ -56,6 +62,7 @@ userSchema.statics.login = async function (email, password) {
   }
   throw Error("incorrect email");
 };
+
 const UserModel = mongoose.model("user", userSchema);
 
 module.exports = UserModel;
