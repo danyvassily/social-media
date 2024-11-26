@@ -1,22 +1,20 @@
 const router = require("express").Router();
 const authController = require("../controllers/auth.controller");
 const userController = require("../controllers/user.controller");
-const uploadController = require('../controllers/upload.controller');
 const multer = require("multer");
-const upload = multer();
 
-// auth
+// Configuration de Multer pour les uploads d'images dans les commentaires
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+// Routes d'authentification
 router.post("/register", authController.signUp);
 router.post("/login", authController.signIn);
 router.get("/logout", authController.logout);
 
-// user DB
+// Routes pour les utilisateurs
 router.get("/", userController.getAllUsers);
 router.get("/:id", userController.userInfo);
-router.put("/:id", userController.updateUser);
 router.delete("/:id", userController.deleteUser);
-
-// upload
-router.post("/upload", upload.single("file"), uploadController.uploadProfil);
 
 module.exports = router;

@@ -7,15 +7,15 @@ const userSchema = new mongoose.Schema(
     pseudo: {
       type: String,
       required: true,
-      minLength: 3,
-      maxLength: 55,
+      minlength: 3,
+      maxlength: 55,
       unique: true,
       trim: true,
     },
     email: {
       type: String,
       required: true,
-      validate: [isEmail],
+      validate: [isEmail, "Email invalide"],
       lowercase: true,
       unique: true,
       trim: true,
@@ -23,34 +23,33 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
-      max: 1024,
+      maxlength: 1024,
       minlength: 6,
-    },
-    picture: {
-      type: String,
-      default: "./uploads/profil/random-user.png",
     },
     bio: {
       type: String,
-      max: 1024,
+      maxlength: 1024,
     },
-    isAdmin: {
-      type: Boolean,
-      default: false
-    },
+    role: {
+      type: String,
+      default: "user"
+    }
   },
   {
     timestamps: true,
   }
 );
 
-// play function before save into display: 'block',
+// Hashage du mot de passe avant sauvegarde
 userSchema.pre("save", async function (next) {
-  const salt = await bcrypt.genSalt();
-  this.password = await bcrypt.hash(this.password, salt);
+  if (this.isModified("password")) {
+    const salt = await bcrypt.genSalt();
+    this.password = await bcrypt.hash(this.password, salt);
+  }
   next();
 });
 
+// Méthode statique pour la connexion d'un utilisateur
 userSchema.statics.login = async function (email, password) {
   const user = await this.findOne({ email });
   if (user) {
@@ -58,9 +57,9 @@ userSchema.statics.login = async function (email, password) {
     if (auth) {
       return user;
     }
-    throw Error("incorrect password");
+    throw Error("Le mot de passe est incorrect");
   }
-  throw Error("incorrect email");
+  throw Error("Cet email n'existe pas");
 };
 
 const UserModel = mongoose.model("user", userSchema);
