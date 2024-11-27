@@ -2,8 +2,8 @@ const UserModel = require("../models/user.model");
 const jwt = require("jsonwebtoken");
 const { signUpErrors, signInErrors } = require("../utils/errors.utils");
 
-// Durée de validité du token : 3 jours
-const maxAge = 3 * 24 * 60 * 60;
+// Durée de validité du token : 1 heure
+const maxAge = 3600;
 
 // Fonction pour créer un token JWT
 const createToken = (id) => {

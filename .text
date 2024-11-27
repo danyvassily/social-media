@@ -1,0 +1,759 @@
+# Documentation de l'Application "Projet Final - Réseau Social"
+
+## Table des Matières
+
+1. [Introduction](#introduction)
+2. [Technologies Utilisées](#technologies-utilisées)
+3. [Architecture de l'Application](#architecture-de-lapplication)
+4. [Modèles (Models)](#modèles-models)
+   - [User Model](#user-model)
+   - [Post Model](#post-model)
+5. [Contrôleurs (Controllers)](#contrôleurs-controllers)
+   - [Auth Controller](#auth-controller)
+   - [User Controller](#user-controller)
+   - [Post Controller](#post-controller)
+   - [Upload Controller](#upload-controller)
+6. [Routes](#routes)
+   - [User Routes](#user-routes)
+   - [Post Routes](#post-routes)
+7. [Middleware](#middleware)
+   - [Authentication Middleware](#authentication-middleware)
+8. [Gestion des Erreurs](#gestion-des-erreurs)
+   - [Error Utilities](#error-utilities)
+9. [Sécurité](#sécurité)
+   - [Authentification JWT](#authentification-jwt)
+   - [Protection des Routes](#protection-des-routes)
+   - [Gestion des Mots de Passe](#gestion-des-mots-de-passe)
+10. [Téléchargement de Fichiers avec Multer](#téléchargement-de-fichiers-avec-multer)
+    - [Configuration de Multer](#configuration-de-multer)
+    - [Gestion des Uploads](#gestion-des-uploads)
+11. [Configuration et Connexion à MongoDB](#configuration-et-connexion-à-mongodb)
+12. [Tests avec Insomnia](#tests-avec-insomnia)
+13. [Installation et Configuration](#installation-et-configuration)
+14. [Conclusion](#conclusion)
+
+---
+
+## Introduction
+
+Ce document présente la documentation complète de l'application "Projet Final - Réseau Social". Cette application permet aux utilisateurs de s'inscrire, de se connecter, de créer des publications avec ou sans images, de commenter sur les publications, et de gérer leur profil. Développée avec Node.js, Express, MongoDB, et d'autres technologies modernes, l'application assure une gestion sécurisée des données utilisateurs et une expérience interactive.
+
+## Technologies Utilisées
+
+- **JavaScript** : Langage de programmation principal côté serveur.
+- **Node.js** : Environnement d'exécution pour JavaScript côté serveur.
+- **Express.js** : Framework web rapide et minimaliste pour Node.js.
+- **MongoDB** : Base de données NoSQL utilisée pour stocker les données de l'application.
+- **Mongoose** : ORM (Object-Relational Mapping) pour MongoDB, facilitant la gestion des modèles de données.
+- **JWT (JSON Web Tokens)** : Utilisé pour l'authentification des utilisateurs.
+- **bcrypt** : Bibliothèque pour le hachage des mots de passe.
+- **multer** : Middleware pour la gestion des uploads de fichiers.
+- **dotenv** : Module pour charger les variables d'environnement depuis un fichier `.env`.
+- **Insomnia** : Outil pour tester les API RESTful.
+
+## Architecture de l'Application
+
+L'application est structurée suivant le pattern MVC (Modèle-Vue-Contrôleur) avec une séparation claire des responsabilités :
+
+- **Models** : Définissent la structure des données et interagissent avec la base de données.
+- **Controllers** : Contiennent la logique métier et manipulent les données via les modèles.
+- **Routes** : Définissent les endpoints de l'API et les associent aux contrôleurs.
+- **Middleware** : Intergiciel pour le traitement des requêtes avant d'atteindre les contrôleurs (par exemple, authentification).
+- **Utils** : Contient des utilitaires comme la gestion des erreurs.
+
+Le serveur est initialisé via le fichier `server.js`, qui configure les middlewares, les routes et démarre le serveur.
+
+## Modèles (Models)
+
+Les modèles définissent la structure des données stockées dans la base de données MongoDB. Différents modèles sont utilisés pour gérer les utilisateurs et les publications.
+
+### User Model
+
+Défini dans `models/user.model.js`, le modèle `User` représente les utilisateurs de l'application.
+
+
+
+**Explications :**
+
+- **pseudo** : Nom d'utilisateur, unique, entre 3 et 55 caractères.
+- **email** : Adresse email, validée par `validator`, unique.
+- **password** : Mot de passe haché avec `bcrypt`, entre 6 et 1024 caractères.
+- **bio** : Biographie de l'utilisateur, optionnelle.
+- **role** : Rôle de l'utilisateur, par défaut "user".
+
+Le schéma inclut une méthode pré enregistrement (`pre("save")`) pour hacher le mot de passe avant de le sauvegarder dans la base de données. Il contient également une méthode statique `login` pour gérer l'authentification des utilisateurs.
+
+### Post Model
+
+Défini dans `models/post.model.js`, le modèle `Post` représente les publications des utilisateurs.
+
+
+
+
+
+
+
+**Explications :**
+
+- **posterId** : ID de l'utilisateur qui crée le post.
+- **message** : Texte du post, avec une limite de 500 caractères.
+- **picture** : Chemin vers une image associée au post, optionnelle.
+- **comments** : Tableau de commentaires contenant l'ID du commentateur, son pseudo, le texte du commentaire, un timestamp, et une image optionnelle.
+
+## Contrôleurs (Controllers)
+
+Les contrôleurs contiennent la logique métier de l'application et interagissent avec les modèles et les autres composants.
+
+### Auth Controller
+
+Défini dans `controllers/auth.controller.js`, le contrôleur d'authentification gère les opérations d'inscription, de connexion et de déconnexion des utilisateurs.
+
+
+
+
+
+
+
+
+**Fonctions :**
+
+- **signUp** : Gère l'inscription d'un nouvel utilisateur en créant un nouvel enregistrement dans la base de données. En cas d'erreur (comme un pseudo ou email déjà utilisé), renvoie des erreurs spécifiques.
+- **signIn** : Gère la connexion de l'utilisateur en vérifiant les informations d'identification. Si valide, crée un JWT et le stocke dans un cookie sécurisé.
+- **logout** : Déconnecte l'utilisateur en supprimant le cookie JWT.
+
+### User Controller
+
+Défini dans `controllers/user.controller.js`, le contrôleur utilisateur gère les opérations liées aux utilisateurs, comme récupérer tous les utilisateurs, obtenir des informations sur un utilisateur spécifique, et supprimer un utilisateur.
+
+
+
+
+
+
+
+
+**Fonctions :**
+
+- **readPost** : Récupère et renvoie tous les posts, triés par date de création décroissante.
+- **createPost** : Crée un nouveau post. Si un fichier image est fourni, vérifie le type et la taille, enregistre l'image sur le serveur, et associe son chemin au post.
+- **deletePost** : Supprime un post basé sur l'ID fourni. Valide l'ID.
+- **commentPost** : Ajoute un commentaire à un post spécifique. Valide l'ID du post.
+- **deleteCommentPost** : Supprime un commentaire d'un post spécifique. Valide l'ID du post et le commentaire.
+- **updatePost** : Met à jour le message d'un post spécifique. Valide l'ID du post.
+
+### Upload Controller
+
+Défini dans `controllers/upload.controller.js`, ce contrôleur gère l'upload d'images dans les commentaires.
+
+
+
+
+
+
+
+
+
+**Fonctions :**
+
+- **uploadCommentImage** : Gère l'upload d'une image dans un commentaire. Vérifie le type et la taille du fichier, sauvegarde l'image sur le serveur, et met à jour la référence de l'image dans le commentaire associé au post.
+
+## Routes
+
+Les routes définissent les endpoints de l'API et associent les requêtes HTTP aux contrôleurs correspondants.
+
+### User Routes
+
+Défini dans `routes/user.routes.js`, comprend les routes liées aux utilisateurs telles que l'inscription, la connexion, la logout, et les opérations CRUD sur les utilisateurs.
+
+
+
+
+
+
+
+
+
+
+**Endpoints :**
+
+- **POST /api/user/register** : Inscription d'un nouvel utilisateur.
+- **POST /api/user/login** : Connexion d'un utilisateur existant.
+- **GET /api/user/logout** : Déconnexion de l'utilisateur.
+- **GET /api/user/** : Récupérer tous les utilisateurs.
+- **GET /api/user/:id** : Récupérer les informations d'un utilisateur spécifique.
+- **DELETE /api/user/:id** : Supprimer un utilisateur spécifique.
+
+### Post Routes
+
+Défini dans `routes/post.routes.js`, comprend les routes liées aux posts telles que la création, lecture, mise à jour, et suppression des posts, ainsi que la gestion des commentaires.
+
+
+
+
+
+
+
+
+
+
+
+
+**Endpoints :**
+
+- **GET /api/post/** : Récupérer tous les posts.
+- **POST /api/post/** : Créer un nouveau post (avec ou sans image).
+- **PUT /api/post/:id** : Mettre à jour un post spécifique.
+- **DELETE /api/post/:id** : Supprimer un post spécifique.
+- **PATCH /api/post/comment-post/:id** : Ajouter un commentaire à un post spécifique.
+- **PATCH /api/post/delete-comment-post/:id** : Supprimer un commentaire d'un post spécifique.
+- **POST /api/post/upload-comment-image** : Télécharger une image dans un commentaire.
+
+## Middleware
+
+Les middlewares sont des fonctions qui interviennent dans le processus de traitement des requêtes avant qu'elles n'atteignent les contrôleurs.
+
+### Authentication Middleware
+
+Défini dans `middleware/auth.middleware.js`, ce middleware vérifie l'authenticité des requêtes en utilisant les JWT stockés dans les cookies.
+
+
+
+
+
+
+
+
+
+
+**Fonctions :**
+
+- **checkUser** : Vérifie si un utilisateur est connecté en inspectant le JWT dans les cookies. Si valide, ajoute les informations de l'utilisateur dans `res.locals.user` pour un accès facile dans les routes suivantes.
+- **requireAuth** : Nécessite que l'utilisateur soit authentifié. Si le JWT est absent ou invalide, renvoie une erreur 401.
+
+### Exemple d'Utilisation dans `server.js`
+
+
+
+
+
+
+
+## Gestion des Erreurs
+
+La gestion centralisée des erreurs permet de renvoyer des messages d'erreur cohérents et précis aux utilisateurs.
+
+### Error Utilities
+
+Défini dans `utils/errors.utils.js`, ce module aide à formater les erreurs pour l'inscription, la connexion et les uploads.
+
+
+
+javascript
+module.exports.signUpErrors = (err) => {
+let errors = { pseudo: "", email: "", password: "" };
+// Pseudo
+if (err.message.includes("pseudo"))
+errors.pseudo = "Pseudo incorrect ou déjà pris";
+// Email
+if (err.message.includes("email")) errors.email = "Email incorrect";
+// Password
+if (err.message.includes("password"))
+errors.password = "Le mot de passe doit faire 6 caractères minimum";
+// Duplication d'email ou pseudo
+if (err.code === 11000) {
+if (Object.keys(err.keyValue)[0].includes("pseudo"))
+errors.pseudo = "Ce pseudo est déjà pris";
+if (Object.keys(err.keyValue)[0].includes("email"))
+errors.email = "Cet email est déjà enregistré";
+}
+return errors;
+};
+module.exports.signInErrors = (err) => {
+let errors = { email: "", password: "" };
+if (err.message.includes("email")) {
+errors.email = "Email inconnu";
+}
+if (err.message.includes("password")) {
+errors.password = "Le mot de passe ne correspond pas";
+}
+return errors;
+};
+module.exports.uploadErrors = (err) => {
+let errors = { format: "", maxSize: "" };
+if (err.message.includes("invalid file")) {
+errors.format = "Format incompatible";
+}
+if (err.message.includes("max size")) {
+errors.maxSize = "Le fichier dépasse 500ko";
+}
+return errors;
+};
+
+
+### Utilisation dans les Contrôleurs
+
+Dans les contrôleurs, ces fonctions sont appelées lorsqu'une erreur est capturée, et le résultat est renvoyé sous forme de réponse JSON au client.
+
+#### Exemple dans `auth.controller.js`
+
+javascript
+module.exports.signUp = async (req, res) => {
+const { pseudo, email, password } = req.body;
+try {
+const user = await UserModel.create({ pseudo, email, password });
+res.status(201).json({ user: user.id });
+} catch (err) {
+const errors = signUpErrors(err);
+res.status(400).send({ errors });
+}
+};
+
+
+
+
+#### Exemple dans `post.controller.js`
+
+javascript
+module.exports.createPost = async (req, res) => {
+let fileName = "";
+if (req.file) {
+try {
+if (
+!["image/jpg", "image/png", "image/jpeg"].includes(req.file.mimetype)
+) {
+throw Error("invalid file");
+}
+if (req.file.size > 500000) throw Error("max size");
+fileName = ${req.body.posterId}_${Date.now()}.jpg;
+await pipeline(
+req.file.stream,
+fs.createWriteStream(./client/public/uploads/posts/${fileName})
+);
+} catch (err) {
+const errors = uploadErrors(err);
+return res.status(400).json({ errors });
+}
+}
+// ...
+};
+
+
+
+## Sécurité
+
+La sécurité est une composante essentielle de cette application, assurant la protection des données utilisateur et empêchant les accès non autorisés.
+
+### Authentification JWT
+
+L'authentification repose sur l'utilisation de JSON Web Tokens (JWT), qui sont générés lors de la connexion des utilisateurs et stockés dans des cookies sécurisés.
+
+- **Génération du Token** : Lors de la connexion (`signIn`), un token est créé avec l'ID de l'utilisateur et une durée de validité de 3 jours.
+- **Protection des Routes** : Les routes sensibles sont protégées par le middleware `requireAuth`, qui valide le token et autorise l'accès uniquement aux utilisateurs authentifiés.
+- **Stockage Sécurisé** : Le JWT est stocké dans un cookie avec l'option `httpOnly` pour empêcher l'accès au token via JavaScript côté client.
+
+### Protection des Routes
+
+Les routes sensibles sont protégées par des middlewares qui vérifient le JWT pour s'assurer que seul un utilisateur authentifié peut y accéder.
+
+### Gestion des Mots de Passe
+
+- **Hachage des Mots de Passe** : Les mots de passe sont hachés avant d'être enregistrés dans la base de données grâce à `bcrypt`. Cela empêche le stockage de mots de passe en clair et améliore la sécurité globale.
+
+
+javascript
+// Hashage du mot de passe avant sauvegarde
+userSchema.pre("save", async function (next) {
+if (this.isModified("password")) {
+const salt = await bcrypt.genSalt();
+this.password = await bcrypt.hash(this.password, salt);
+}
+next();
+});
+
+
+
+
+### Validation et Sanitization
+
+- **Validation des Entrées** : Les modèles utilisent des validations, comme `validator` pour les emails, afin de s'assurer que seules des données valides sont stockées.
+- **Sanitization des Données** : Les champs tels que `pseudo` et `email` sont automatiquement mis en minuscule et les espaces sont supprimés (`trim: true`).
+
+### Prévention des Attaques
+
+- **CORS** : Configuré pour autoriser uniquement les origines autorisées via l'option `origin: process.env.CLIENT_URL` dans `server.js`.
+- **Gestion des Erreurs** : Limitation des informations renvoyées en cas d'erreur pour éviter de révéler des détails sensibles:
+
+
+
+- **Cookies Sécurisés** : Les cookies contenant les JWT sont marqués comme `httpOnly` pour empêcher les scripts côté client de les lire.
+
+## Téléchargement de Fichiers avec Multer
+
+Multer est utilisé pour gérer les uploads de fichiers (images) dans les posts et les commentaires.
+
+### Configuration de Multer
+
+La configuration de Multer dans les routeurs est basée sur le stockage en mémoire, ce qui permet de gérer les fichiers avant de les sauvegarder définitivement sur le serveur.
+
+
+javascript
+const multer = require("multer");
+// Configuration de Multer pour les uploads d'images dans les commentaires
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+
+**Explications :**
+
+- **memoryStorage** : Les fichiers sont stockés en mémoire sous forme de buffer. Ceci est approprié pour les petites tailles de fichiers et permet d'effectuer des manipulations avant leur sauvegarde définitive.
+
+### Gestion des Uploads
+
+Lors de la création d'un post ou l'ajout d'un commentaire, un fichier peut être uploadé. Les contrôleurs vérifient le type et la taille du fichier avant de le sauvegarder dans le système de fichiers et d'enregistrer le chemin dans la base de données.
+
+#### Exemple : Création d'un Post avec Image
+
+
+javascript
+module.exports.createPost = async (req, res) => {
+let fileName = "";
+if (req.file) {
+try {
+if (
+!["image/jpg", "image/png", "image/jpeg"].includes(req.file.mimetype)
+) {
+throw Error("invalid file");
+}
+if (req.file.size > 500000) throw Error("max size");
+fileName = ${req.body.posterId}_${Date.now()}.jpg;
+await pipeline(
+req.file.stream,
+fs.createWriteStream(./client/public/uploads/posts/${fileName})
+);
+} catch (err) {
+const errors = uploadErrors(err);
+return res.status(400).json({ errors });
+}
+}
+const newPost = new PostModel({
+posterId: req.body.posterId,
+message: req.body.message,
+picture: fileName ? ./uploads/posts/${fileName} : "",
+comments: [],
+});
+newPost
+.save()
+.then((post) => res.status(201).json(post))
+.catch((err) => res.status(400).send(err));
+};
+
+
+#### Exemple : Upload d'une Image dans un Commentaire
+
+javascript
+module.exports.uploadCommentImage = async (req, res) => {
+try {
+const { postId, commentId } = req.body;
+const file = req.file;
+// Vérification du type de fichier
+if (!["image/jpg", "image/png", "image/jpeg"].includes(file.mimetype)) {
+throw Error("invalid file");
+}
+// Vérification de la taille du fichier
+if (file.size > 500000) throw Error("max size");
+const fileName = comment_${commentId}_${Date.now()}.jpg;
+// Sauvegarde du fichier dans le dossier uploads/comments
+await pipeline(
+file.stream,
+fs.createWriteStream(./client/public/uploads/comments/${fileName})
+);
+// Mise à jour de l'URL de l'image dans le commentaire
+const updatedPost = await PostModel.findOneAndUpdate(
+{ id: postId, "comments._id": commentId },
+{ $set: { "comments.$.picture": ./uploads/comments/${fileName} } },
+{ new: true }
+);
+if (!updatedPost) {
+return res
+.status(404)
+.json({ message: "Post ou commentaire non trouvé" });
+}
+res.status(200).json(updatedPost);
+} catch (err) {
+const errors = uploadErrors(err);
+res.status(400).json({ errors });
+}
+};
+
+
+
+**Processus :**
+
+1. **Validation du Fichier** : Vérifie que le fichier est une image (jpg, png, jpeg) et ne dépasse pas 500 Ko.
+2. **Nom Unique** : Crée un nom de fichier unique pour éviter les conflits.
+3. **Sauvegarde** : Enregistre le fichier sur le disque dans le répertoire approprié.
+4. **Mise à Jour de la Base de Données** : Met à jour le chemin de l'image dans le post ou le commentaire.
+
+## Configuration et Connexion à MongoDB
+
+La connexion à la base de données MongoDB est gérée via `config/db.js`. Si la connexion échoue, le serveur ne démarre pas, et une erreur est affichée.
+
+
+javascript
+require('dotenv').config({ path: './config/.env' });
+const mongoose = require("mongoose");
+const MONGODB_URL = process.env.MONGODB_URL;
+if (!MONGODB_URL) {
+console.error("Erreur : MONGODB_URL n'est pas définie dans le fichier .env");
+process.exit(1); // Arrête le serveur si MONGODB_URL n'est pas définie
+}
+// Connexion à MongoDB
+mongoose.connect(MONGODB_URL)
+.then(() => console.log("Connecté à MongoDB"))
+.catch((err) => console.log("Erreur de connexion à MongoDB:", err));
+
+
+**Points Clés :**
+
+- **Charger les Variables d'Environnement** : Utilisation de `dotenv` pour charger les variables depuis `.env`.
+- **Vérification de `MONGODB_URL`** : Si la variable d'environnement `MONGODB_URL` n'est pas définie, le serveur s'arrête et affiche une erreur.
+- **Connexion** : Utilise `mongoose.connect` pour se connecter à la base de données MongoDB.
+- **Logging** : Affiche des messages de succès ou d'erreur lors de la tentative de connexion.
+
+## Tests avec Insomnia
+
+Pour tester l'API, vous pouvez utiliser Insomnia pour envoyer des requêtes HTTP et vérifier les réponses de l'API.
+
+### Environnement
+
+
+
+
+### Requêtes
+
+1. **Inscription (Sign Up)**
+   - **Méthode** : POST
+   - **URL** : `{{ base_url }}/user/register`
+   - **Body** : JSON
+
+   ```json
+   {
+     "pseudo": "votrePseudo",
+     "email": "votreEmail@example.com",
+     "password": "votreMotDePasse"
+   }
+   ```
+
+2. **Connexion (Sign In)**
+   - **Méthode** : POST
+   - **URL** : `{{ base_url }}/user/login`
+   - **Body** : JSON
+
+   ```json
+   {
+     "email": "votreEmail@example.com",
+     "password": "votreMotDePasse"
+   }
+   ```
+
+3. **Récupérer tous les utilisateurs**
+   - **Méthode** : GET
+   - **URL** : `{{ base_url }}/user`
+
+4. **Récupérer un utilisateur spécifique**
+   - **Méthode** : GET
+   - **URL** : `{{ base_url }}/user/:id`
+   - **Remplacez** `:id` par l'ID de l'utilisateur que vous souhaitez récupérer.
+
+5. **Supprimer un utilisateur**
+   - **Méthode** : DELETE
+   - **URL** : `{{ base_url }}/user/:id`
+   - **Remplacez** `:id` par l'ID de l'utilisateur que vous souhaitez supprimer.
+
+6. **Créer un post**
+   - **Méthode** : POST
+   - **URL** : `{{ base_url }}/post`
+   - **Body** : Form Data
+     - **posterId** : ID de l'utilisateur
+     - **message** : Votre message
+     - **file** : Sélectionnez un fichier image
+
+   ```json
+   {
+     "posterId": "idDeLutilisateur",
+     "message": "Votre message",
+     "file": "Sélectionnez un fichier image"
+   }
+   ```
+
+7. **Récupérer tous les posts**
+   - **Méthode** : GET
+   - **URL** : `{{ base_url }}/post`
+
+8. **Récupérer un post spécifique**
+   - **Méthode** : GET
+   - **URL** : `{{ base_url }}/post/:id`
+   - **Remplacez** `:id` par l'ID du post que vous souhaitez récupérer.
+
+9. **Mettre à jour un post**
+   - **Méthode** : PUT
+   - **URL** : `{{ base_url }}/post/:id`
+   - **Body** : JSON
+
+   ```json
+   {
+     "message": "Votre message mis à jour"
+   }
+   ```
+   - **Remplacez** `:id` par l'ID du post que vous souhaitez mettre à jour.
+
+10. **Supprimer un post**
+    - **Méthode** : DELETE
+    - **URL** : `{{ base_url }}/post/:id`
+    - **Remplacez** `:id` par l'ID du post que vous souhaitez supprimer.
+
+11. **Ajouter un commentaire à un post**
+    - **Méthode** : PATCH
+    - **URL** : `{{ base_url }}/post/comment-post/:id`
+    - **Body** : JSON
+
+    ```json
+    {
+      "commenterId": "idDuCommentateur",
+      "commenterPseudo": "PseudoDuCommentateur",
+      "text": "Votre commentaire",
+      "picture": "URL_de_l_image_optionnelle"
+    }
+    ```
+
+12. **Supprimer un commentaire**
+    - **Méthode** : PATCH
+    - **URL** : `{{ base_url }}/post/delete-comment-post/:id`
+    - **Body** : JSON
+
+    ```json
+    {
+      "commentId": "idDuCommentaire"
+    }
+    ```
+
+13. **Upload une image dans un commentaire**
+    - **Méthode** : POST
+    - **URL** : `{{ base_url }}/post/upload-comment-image`
+    - **Body** : Form Data
+      - **postId** : ID du post
+      - **commentId** : ID du commentaire
+      - **file** : Sélectionnez un fichier image
+
+    ```json
+    {
+      "postId": "idDuPost",
+      "commentId": "idDuCommentaire",
+      "file": "Sélectionnez un fichier image"
+    }
+    ```
+
+### Instructions pour Effectuer les Tests
+
+1. **Ouvrez Insomnia** et créez un nouvel environnement en utilisant l'URL de base fournie.
+
+2. **Créez des requêtes** pour chaque endpoint en suivant les détails ci-dessus.
+
+3. **Envoyez les requêtes** et **vérifiez les réponses**.
+
+4. **Stockage des Cookies** : Insomnia devrait gérer automatiquement les cookies, permettant aux requêtes authentifiées d'utiliser le JWT stocké pour les requêtes futures.
+
+5. **Vérifiez votre base de données** pour voir les changements effectués par les requêtes (utilisateurs créés, posts ajoutés, etc.).
+
+## Installation et Configuration
+
+Pour installer et configurer l'application, suivez les étapes ci-dessous.
+
+### Prérequis
+
+- **Node.js** : Assurez-vous que Node.js est installé sur votre machine.
+- **MongoDB** : Vous devez disposer d'une instance MongoDB accessible. Vous pouvez utiliser MongoDB Atlas pour une base de données cloud.
+
+### Étapes d'Installation
+
+1. **Cloner le Référentiel**
+
+   ```bash
+   git clone https://github.com/danyvassily/projetfinal-dany.git
+   cd projetfinal-dany
+   ```
+
+2. **Installer les Dépendances**
+
+   ```bash
+   npm install
+   ```
+
+3. **Configuration des Variables d'Environnement**
+
+   Créez un fichier `.env` dans le dossier `config/` avec les variables suivantes :
+
+   ```env
+   MONGODB_URL=mongodb+srv://<username>:<password>@cluster0.mongodb.net/<dbname>?retryWrites=true&w=majority
+   TOKEN_SECRET=VotreCléSecrète
+   CLIENT_URL=http://localhost:3000
+   PORT=8080
+   ```
+
+   **Remplacez** `<username>`, `<password>`, et `<dbname>` par vos informations MongoDB réelles.
+
+4. **Démarrer le Serveur**
+
+   Pour démarrer le serveur en mode développement avec `nodemon` :
+
+   ```bash
+   npm run dev
+   ```
+
+   Pour démarrer le serveur en mode production :
+
+   ```bash
+   npm start
+   ```
+
+   Le serveur sera accessible sur `http://localhost:8080` par défaut (ou le port spécifié dans `.env`).
+
+### Structure des Dossiers
+
+
+projetfinal-dany/
+├── config/
+│ ├── db.js
+│ └── .env
+├── controllers/
+│ ├── auth.controller.js
+│ ├── post.controller.js
+│ ├── upload.controller.js
+│ └── user.controller.js
+├── middleware/
+│ └── auth.middleware.js
+├── models/
+│ ├── post.model.js
+│ └── user.model.js
+├── routes/
+│ ├── post.routes.js
+│ └── user.routes.js
+├── utils/
+│ └── errors.utils.js
+├── client/
+│ └── public/
+│ └── uploads/
+│ ├── posts/
+│ └── comments/
+├── server.js
+├── package.json
+└── .gitignore
+
+
+## Conclusion
+
+Cette documentation couvre les aspects essentiels de votre application de réseau social, y compris la structure du code, les modèles de données, les contrôleurs, les routes, les middlewares, la gestion des erreurs et les aspects de sécurité. En suivant cette documentation, vous devriez être en mesure de maintenir, développer et tester efficacement votre application.
+
+N'hésitez pas à revenir pour toute question supplémentaire ou clarification.
+
+---
