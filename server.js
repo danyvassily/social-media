@@ -26,6 +26,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Ajouter ces lignes après vos autres middlewares
+app.use('/uploads', express.static('client/public/uploads'));
+
 // Vérifier l'utilisateur pour toutes les routes
 app.get("*", checkUser);
 

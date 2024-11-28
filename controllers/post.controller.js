@@ -5,6 +5,25 @@ const fs = require("fs");
 const { promisify } = require("util");
 const pipeline = promisify(require("stream").pipeline);
 
+// Ajouter cette fonction d'initialisation
+const initUploadDirectories = () => {
+  const dirs = [
+    './uploads/posts',
+    './uploads/comments',
+    './client/public/uploads/posts',
+    './client/public/uploads/comments'
+  ];
+  
+  dirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+};
+
+// Appeler la fonction au démarrage
+initUploadDirectories();
+
 // Récupérer tous les posts, triés par date de création décroissante
 module.exports.readPost = (req, res) => {
   PostModel.find()
@@ -21,9 +40,7 @@ module.exports.createPost = async (req, res) => {
 
   if (req.file) {
     try {
-      if (
-        !["image/jpg", "image/png", "image/jpeg"].includes(req.file.mimetype)
-      ) {
+      if (!["image/jpg", "image/png", "image/jpeg"].includes(req.file.mimetype)) {
         throw Error("invalid file");
       }
 
@@ -31,11 +48,20 @@ module.exports.createPost = async (req, res) => {
 
       fileName = `${req.body.posterId}_${Date.now()}.jpg`;
 
-      await pipeline(
-        req.file.stream,
-        fs.createWriteStream(`./client/public/uploads/posts/${fileName}`)
-      );
+      // Modification ici : utiliser req.file.buffer au lieu de req.file.stream
+      const uploadPath = './client/public/uploads/posts';
+      const filePath = `${uploadPath}/${fileName}`;
+      
+      // Vérifier si le répertoire existe
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true });
+      }
+
+      // Écrire le fichier directement depuis le buffer
+      fs.writeFileSync(filePath, req.file.buffer);
+
     } catch (err) {
+      console.error("Erreur lors de l'upload:", err);
       const errors = uploadErrors(err);
       return res.status(400).json({ errors });
     }
@@ -44,14 +70,16 @@ module.exports.createPost = async (req, res) => {
   const newPost = new PostModel({
     posterId: req.body.posterId,
     message: req.body.message,
-    picture: fileName ? `./uploads/posts/${fileName}` : "",
+    picture: fileName ? `/uploads/posts/${fileName}` : "",
     comments: [],
   });
 
-  newPost
-    .save()
-    .then((post) => res.status(201).json(post))
-    .catch((err) => res.status(400).send(err));
+  try {
+    const post = await newPost.save();
+    res.status(201).json(post);
+  } catch (err) {
+    res.status(400).json(err);
+  }
 };
 
 // Supprimer un post

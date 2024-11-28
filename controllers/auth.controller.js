@@ -14,14 +14,19 @@ const createToken = (id) => {
 
 // Inscription
 module.exports.signUp = async (req, res) => {
-  const { pseudo, email, password } = req.body;
+  console.log("Tentative d'inscription:", req.body);
+  const { email, password } = req.body;
 
   try {
-    const user = await UserModel.create({ pseudo, email, password });
-    res.status(201).json({ user: user._id });
+    const user = await UserModel.create({ email, password });
+    res.status(201).json({ 
+      user: user._id,
+      message: "Utilisateur créé avec succès" 
+    });
   } catch (err) {
+    console.error("Erreur d'inscription:", err);
     const errors = signUpErrors(err);
-    res.status(400).send({ errors });
+    res.status(400).json({ errors });
   }
 };
 
@@ -43,5 +48,5 @@ module.exports.signIn = async (req, res) => {
 // Déconnexion
 module.exports.logout = (req, res) => {
   res.cookie("jwt", "", { maxAge: 1 });
-  res.redirect("/");
+  res.status(200).json({ message: "Déconnexion réussie" });
 };
