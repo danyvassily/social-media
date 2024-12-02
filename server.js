@@ -1,16 +1,15 @@
-const app = require("./app");
-const dotenv = require("dotenv");
+require('dotenv').config({ path: './config/.env' });
+const app = require('./app');
 const connectDB = require("./config/db");
 
-dotenv.config({ path: "./config/.env" });
+// Ne connecter à MongoDB que si ce n'est pas un test
+if (process.env.NODE_ENV !== 'test') {
+  connectDB(process.env.MONGODB_URL);
+}
 
-// Connexion à la base de données
-connectDB(process.env.MONGODB_URL);
-
-// Démarrage du serveur
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Le serveur fonctionne sur le port ${PORT}`);
 });
 
-module.exports = app;
+module.exports = { app, server };
