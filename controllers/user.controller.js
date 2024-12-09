@@ -1,44 +1,46 @@
-// Importation du modèle utilisateur et de l'objet ObjectID de Mongoose pour la validation des IDs
 const UserModel = require("../models/user.model");
 const ObjectID = require("mongoose").Types.ObjectId;
 
-// Fonction pour récupérer tous les utilisateurs sans leur mot de passe
+// Récupérer tous les utilisateurs
 module.exports.getAllUsers = async (req, res) => {
   try {
-    const users = await UserModel.find().select("-password"); // Recherche de tous les utilisateurs et exclusion du champ password
-    res.status(200).json(users); // Envoi des utilisateurs en réponse
+    const users = await UserModel.find().select("-password");
+    res.status(200).json(users);
   } catch (err) {
-    res.status(500).json({ message: err.message }); // Envoi de l'erreur en cas d'échec
+    res.status(400).json({ message: "Erreur lors de la récupération des utilisateurs" });
   }
 };
 
-// Fonction pour récupérer les informations d'un utilisateur spécifique
+// Récupérer un utilisateur spécifique
 module.exports.userInfo = async (req, res) => {
-  if (!ObjectID.isValid(req.params.id))
-    return res.status(400).send("ID inconnu : " + req.params.id); // Vérification de la validité de l'ID
+  if (!ObjectID.isValid(req.params.id)) {
+    return res.status(400).json({ message: "ID invalide" });
+  }
 
   try {
-    const user = await UserModel.findById(req.params.id).select("-password"); // Recherche de l'utilisateur par ID et exclusion du champ password
+    const user = await UserModel.findById(req.params.id).select("-password");
     if (!user) {
-      return res.status(404).send("Utilisateur non trouvé"); // Envoi d'une erreur si l'utilisateur n'est pas trouvé
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
-    res.send(user); // Envoi des informations de l'utilisateur
+    res.status(200).json(user);
   } catch (err) {
-    res
-      .status(500)
-      .send("Erreur lors de la récupération de l'utilisateur : " + err); // Envoi de l'erreur en cas d'échec
+    res.status(400).json({ message: "Erreur lors de la récupération de l'utilisateur" });
   }
 };
 
-// Fonction pour supprimer un utilisateur
+// Supprimer un utilisateur
 module.exports.deleteUser = async (req, res) => {
-  if (!ObjectID.isValid(req.params.id))
-    return res.status(400).send("ID inconnu : " + req.params.id); // Vérification de la validité de l'ID
+  if (!ObjectID.isValid(req.params.id)) {
+    return res.status(400).json({ message: "ID invalide" });
+  }
 
   try {
-    await UserModel.findByIdAndDelete(req.params.id); // Suppression de l'utilisateur par ID
-    res.status(200).json({ message: "Utilisateur supprimé avec succès." }); // Message de confirmation
+    const deletedUser = await UserModel.findByIdAndDelete(req.params.id);
+    if (!deletedUser) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
+    res.status(200).json({ message: "Utilisateur supprimé avec succès" });
   } catch (err) {
-    res.status(500).json({ message: err.message }); // Envoi de l'erreur en cas d'échec
+    res.status(400).json({ message: "Erreur lors de la suppression de l'utilisateur" });
   }
 };

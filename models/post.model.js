@@ -1,38 +1,68 @@
-const mongoose = require("mongoose"); // Importation de Mongoose
+const mongoose = require("mongoose");
 
-// Définition du schéma des posts
+// Schéma pour les commentaires
+const CommentSchema = new mongoose.Schema({
+  commenterId: {
+    type: String,
+    required: true
+  },
+  commenterPseudo: {
+    type: String,
+    required: true
+  },
+  text: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 500
+  },
+  timestamp: {
+    type: Number,
+    default: Date.now
+  }
+});
+
+// Schéma pour les posts
 const PostSchema = new mongoose.Schema(
   {
     posterId: {
-      type: String, // ID de l'utilisateur qui crée le post
-      required: true, // Champ obligatoire
+      type: String,
+      required: true
     },
     message: {
-      type: String, // Texte du post
-      trim: true, // Suppression des espaces
-      maxlength: 500, // Longueur maximale
-      required: true, // Ajout de cette ligne pour rendre le message obligatoire
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 500
     },
     picture: {
-      type: String, // Chemin vers une image associée au post
+      type: String,
+      default: ""
+    },
+    gif: {
+      type: String,
+      default: ""
     },
     comments: {
-      type: [
-        {
-          commenterId: String, // ID du commentateur
-          commenterPseudo: String, // Pseudo du commentateur
-          text: String, // Texte du commentaire
-          timestamp: Number, // Horodatage du commentaire
-          picture: String, // Chemin vers une image optionnelle dans le commentaire
-        },
-      ],
-      required: true, // Champ obligatoire
-      default: [], // Valeur par défaut (tableau vide)
-    },
+      type: [CommentSchema],
+      default: []
+    }
   },
   {
-    timestamps: true, // Ajout des timestamps (createdAt, updatedAt)
+    timestamps: true
   }
 );
 
-module.exports = mongoose.model("post", PostSchema); // Création et exportation du modèle post
+// Méthode pour ajouter un commentaire
+PostSchema.methods.addComment = async function(commentData) {
+  this.comments.push(commentData);
+  return this.save();
+};
+
+// Méthode pour supprimer un commentaire
+PostSchema.methods.removeComment = async function(commentId) {
+  this.comments = this.comments.filter(comment => comment._id.toString() !== commentId);
+  return this.save();
+};
+
+module.exports = mongoose.model("post", PostSchema);

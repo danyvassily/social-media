@@ -1,128 +1,170 @@
-const PostModel = require("../models/post.model"); // Importation du modèle post
-const { uploadErrors } = require("../utils/errors.utils"); // Importation des fonctions de gestion des erreurs d'upload
-const ObjectID = require("mongoose").Types.ObjectId; // Importation de ObjectID pour la validation des IDs
-const fs = require("fs"); // Importation du module fs pour interagir avec le système de fichiers
-const { promisify } = require("util"); // Importation de promisify pour convertir les fonctions callback en promesses
-const pipeline = promisify(require("stream").pipeline); // Conversion de stream.pipeline en promesse
+const PostModel = require("../models/post.model");
+const ObjectID = require("mongoose").Types.ObjectId;
+const fs = require("fs");
+const { promisify } = require("util");
+const pipeline = promisify(require("stream").pipeline);
 
-// Fonction d'initialisation des répertoires d'uploads
-const initUploadDirectories = () => {
-  const dirs = [
-    './uploads/posts',
-    './uploads/comments',
-    './client/public/uploads/posts',
-    './client/public/uploads/comments'
-  ];
-  
-  dirs.forEach(dir => {
-    if (!fs.existsSync(dir)) { // Vérification si le répertoire existe
-      fs.mkdirSync(dir, { recursive: true }); // Création du répertoire si non existant
-    }
-  });
+// Récupérer tous les posts
+module.exports.readPost = async (req, res) => {
+  try {
+    const posts = await PostModel.find().sort({ createdAt: -1 });
+    res.status(200).json(posts);
+  } catch (err) {
+    res.status(400).json({ message: "Erreur lors de la récupération des posts" });
+  }
 };
 
-// Appel de la fonction d'initialisation au démarrage
-initUploadDirectories();
-
-// Fonction pour récupérer tous les posts, triés par date de création décroissante
-module.exports.readPost = (req, res) => {
-  PostModel.find() // Recherche de tous les posts
-    .sort({ createdAt: -1 }) // Tri par date de création décroissante
-    .then((docs) => res.send(docs)) // Envoi des posts en réponse
-    .catch((err) =>
-      console.log("Erreur lors de la récupération des données : " + err) // Journalisation de l'erreur
-    );
-};
-
-// Fonction pour créer un nouveau post avec possibilité d'ajouter une image
+// Créer un nouveau post
 module.exports.createPost = async (req, res) => {
   try {
     const post = await PostModel.create({
       posterId: req.body.posterId,
-      message: req.body.message
+      message: req.body.message,
+      picture: req.body.picture || "",
+      comments: []
     });
     res.status(201).json(post);
   } catch (err) {
-    res.status(400).json({ errors: err.message });
+    res.status(400).json({ message: "Erreur lors de la création du post" });
   }
 };
 
-// Fonction pour supprimer un post
-module.exports.deletePost = (req, res) => {
-  if (!ObjectID.isValid(req.params.id))
-    return res.status(400).send("ID inconnu : " + req.params.id); // Vérification de la validité de l'ID
+// Upload d'une image
+module.exports.uploadImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Aucun fichier fourni" });
+    }
 
-  PostModel.findByIdAndDelete(req.params.id) // Suppression du post par ID
-    .then((docs) => res.send(docs)) // Envoi du post supprimé en réponse
-    .catch((err) => console.log("Erreur lors de la suppression : " + err)); // Journalisation de l'erreur
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ message: "Format de fichier non autorisé (JPEG, PNG ou GIF uniquement)" });
+    }
+
+    const extension = req.file.mimetype.split('/')[1];
+    const fileName = `${req.body.posterId}-${Date.now()}.${extension}`;
+    const filePath = `uploads/posts/${fileName}`;
+
+    if (!fs.existsSync("uploads/posts")) {
+      fs.mkdirSync("uploads/posts", { recursive: true });
+    }
+
+    await pipeline(
+      req.file.stream,
+      fs.createWriteStream(`${__dirname}/../../client/public/${filePath}`)
+    );
+
+    res.status(200).json({ imageUrl: filePath });
+  } catch (err) {
+    res.status(400).json({ message: "Erreur lors de l'upload de l'image" });
+  }
 };
 
-// Fonction pour ajouter un commentaire à un post
+// Supprimer un post
+module.exports.deletePost = async (req, res) => {
+  if (!ObjectID.isValid(req.params.id)) {
+    return res.status(400).json({ message: "ID invalide" });
+  }
+
+  try {
+    const post = await PostModel.findById(req.params.id);
+    
+    if (!post) {
+      return res.status(404).json({ message: "Post non trouvé" });
+    }
+
+    if (post.picture) {
+      const imagePath = `${__dirname}/../../client/public/${post.picture}`;
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    await post.deleteOne();
+    res.status(200).json({ message: "Post supprimé avec succès" });
+  } catch (err) {
+    res.status(400).json({ message: "Erreur lors de la suppression du post" });
+  }
+};
+
+// Ajouter un commentaire
 module.exports.commentPost = async (req, res) => {
-  if (!ObjectID.isValid(req.params.id))
-    return res.status(400).json({ message: "ID invalide" }); // Vérification de la validité de l'ID
+  if (!ObjectID.isValid(req.params.id)) {
+    return res.status(400).json({ message: "ID invalide" });
+  }
 
   try {
     const updatedPost = await PostModel.findByIdAndUpdate(
-      req.params.id, // ID du post à commenter
+      req.params.id,
       {
         $push: {
           comments: {
-            commenterId: req.body.commenterId, // ID du commentateur
-            commenterPseudo: req.body.commenterPseudo, // Pseudo du commentateur
-            text: req.body.text, // Texte du commentaire
-            timestamp: Date.now(), // Horodatage du commentaire
-            picture: req.body.picture || "", // Chemin de l'image optionnelle
-          },
-        },
+            commenterId: req.body.commenterId,
+            commenterPseudo: req.body.commenterPseudo,
+            text: req.body.text,
+            timestamp: Date.now()
+          }
+        }
       },
-      { new: true } // Retourne le document après la mise à jour
-    );
-    res.status(200).json(updatedPost); // Envoi du post mis à jour en réponse
-  } catch (err) {
-    res.status(400).json({ message: err.message }); // Envoi de l'erreur en cas d'échec
-  }
-};
-
-// Fonction pour supprimer un commentaire d'un post
-module.exports.deleteCommentPost = async (req, res) => {
-  if (!ObjectID.isValid(req.params.id))
-    return res.status(400).json({ message: "ID invalide" }); // Vérification de la validité de l'ID
-
-  try {
-    const updatedPost = await PostModel.findByIdAndUpdate(
-      req.params.id, // ID du post
-      {
-        $pull: {
-          comments: { _id: req.body.commentId }, // Suppression du commentaire par ID
-        },
-      },
-      { new: true } // Retourne le document après la mise à jour
-    );
-    res.status(200).json(updatedPost); // Envoi du post mis à jour en réponse
-  } catch (err) {
-    res.status(400).json({ message: err.message }); // Envoi de l'erreur en cas d'échec
-  }
-};
-
-// Fonction pour mettre à jour le message d'un post
-module.exports.updatePost = async (req, res) => {
-  if (!ObjectID.isValid(req.params.id))
-    return res.status(400).json({ message: "ID invalide : " + req.params.id }); // Vérification de la validité de l'ID
-
-  try {
-    const updatedPost = await PostModel.findByIdAndUpdate(
-      req.params.id, // ID du post à mettre à jour
-      { message: req.body.message }, // Nouveau message
-      { new: true } // Retourne le document après la mise à jour
+      { new: true }
     );
 
     if (!updatedPost) {
-      return res.status(404).json({ message: "Post non trouvé" }); // Envoi d'une erreur si le post n'est pas trouvé
+      return res.status(404).json({ message: "Post non trouvé" });
     }
-
-    res.status(200).json(updatedPost); // Envoi du post mis à jour en réponse
+    res.status(200).json(updatedPost);
   } catch (err) {
-    res.status(500).json({ message: err.message }); // Envoi de l'erreur en cas d'échec
+    res.status(400).json({ message: "Erreur lors de l'ajout du commentaire" });
+  }
+};
+
+// Supprimer un commentaire
+module.exports.deleteCommentPost = async (req, res) => {
+  if (!ObjectID.isValid(req.params.id)) {
+    return res.status(400).json({ message: "ID invalide" });
+  }
+
+  try {
+    const updatedPost = await PostModel.findByIdAndUpdate(
+      req.params.id,
+      {
+        $pull: {
+          comments: { _id: req.body.commentId }
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Post non trouvé" });
+    }
+    res.status(200).json(updatedPost);
+  } catch (err) {
+    res.status(400).json({ message: "Erreur lors de la suppression du commentaire" });
+  }
+};
+
+// Mettre à jour un post
+module.exports.updatePost = async (req, res) => {
+  if (!ObjectID.isValid(req.params.id)) {
+    return res.status(400).json({ message: "ID invalide" });
+  }
+
+  try {
+    const updatedPost = await PostModel.findByIdAndUpdate(
+      req.params.id,
+      { 
+        message: req.body.message,
+        picture: req.body.picture || undefined
+      },
+      { new: true }
+    );
+
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Post non trouvé" });
+    }
+    res.status(200).json(updatedPost);
+  } catch (err) {
+    res.status(400).json({ message: "Erreur lors de la mise à jour du post" });
   }
 };

@@ -1,27 +1,38 @@
-const router = require("express").Router(); // Création d'un routeur Express
-const postController = require("../controllers/post.controller"); // Importation du contrôleur des posts
-const uploadController = require("../controllers/upload.controller"); // Importation du contrôleur des uploads
-const multer = require("multer"); // Importation de Multer pour gérer les uploads de fichiers
+const router = require("express").Router();
+const postController = require("../controllers/post.controller");
+const multer = require("multer");
 
-// Configuration de Multer pour les uploads d'images dans les commentaires
-const storage = multer.memoryStorage(); // Utilisation du stockage en mémoire
-const upload = multer({ storage }); // Initialisation de Multer avec le stockage défini
+// Configuration de Multer pour les images
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (
+      file.mimetype === "image/jpeg" ||
+      file.mimetype === "image/png" ||
+      file.mimetype === "image/gif"
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error("Format de fichier non autorisé (JPEG, PNG ou GIF uniquement)"), false);
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // Limite de 10MB
+  }
+});
 
-// Routes CRUD basiques pour les posts
-router.get("/", postController.readPost); // Route pour récupérer tous les posts
-router.post("/", upload.single("file"), postController.createPost); // Route pour créer un nouveau post avec un fichier image
-router.put("/:id", postController.updatePost); // Route pour mettre à jour un post spécifique
-router.delete("/:id", postController.deletePost); // Route pour supprimer un post spécifique
+// Routes CRUD
+router.get("/", postController.readPost);
+router.post("/", postController.createPost);
+router.put("/:id", postController.updatePost);
+router.delete("/:id", postController.deletePost);
 
-// Routes pour les commentaires
-router.patch("/comment-post/:id", postController.commentPost); // Route pour ajouter un commentaire à un post spécifique
-router.patch("/delete-comment-post/:id", postController.deleteCommentPost); // Route pour supprimer un commentaire d'un post spécifique
+// Upload d'images
+router.post("/upload-image", upload.single("image"), postController.uploadImage);
 
-// Route pour l'upload d'image dans les commentaires
-router.post(
-  "/upload-comment-image",
-  upload.single("file"), // Middleware pour gérer l'upload d'un seul fichier nommé "file"
-  uploadController.uploadCommentImage // Contrôleur pour traiter l'upload de l'image dans le commentaire
-);
+// Gestion des commentaires
+router.patch("/comment-post/:id", postController.commentPost);
+router.patch("/delete-comment-post/:id", postController.deleteCommentPost);
 
-module.exports = router; // Exportation du routeur
+module.exports = router;
