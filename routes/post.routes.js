@@ -28,6 +28,7 @@ router.post("/", postController.createPost);
 router.put("/:id", postController.updatePost);
 router.delete("/:id", postController.deletePost);
 
+
 // Upload d'images
 router.post("/upload-image", upload.single("image"), postController.uploadImage);
 
