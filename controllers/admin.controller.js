@@ -37,8 +37,10 @@ module.exports.deleteUserAndPosts = async (req, res) => {
       message: "Utilisateur et tous ses posts supprimés avec succès" 
     });
   } catch (err) {
+    console.log("Erreur détaillée:", err);
     res.status(400).json({ 
-      message: "Erreur lors de la suppression de l'utilisateur et de ses posts" 
+      message: "Erreur lors de la suppression de l'utilisateur et de ses posts",
+      error: err.message 
     });
   }
 };
