@@ -2,6 +2,9 @@ require("dotenv").config({ path: "./config/.env" });
 const app = require("./app");
 const connectDB = require("./config/db");
 
+// Connexion à la base de données
+connectDB(process.env.MONGODB_URL);
+
 // Démarrage du serveur
 const PORT = process.env.PORT;
 
