@@ -6,10 +6,6 @@ const CommentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  commenterPseudo: {
-    type: String,
-    required: true
-  },
   text: {
     type: String,
     required: true,
@@ -39,10 +35,6 @@ const PostSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
-    gif: {
-      type: String,
-      default: ""
-    },
     comments: {
       type: [CommentSchema],
       default: []
@@ -52,17 +44,5 @@ const PostSchema = new mongoose.Schema(
     timestamps: true
   }
 );
-
-// Méthode pour ajouter un commentaire
-PostSchema.methods.addComment = async function(commentData) {
-  this.comments.push(commentData);
-  return this.save();
-};
-
-// Méthode pour supprimer un commentaire
-PostSchema.methods.removeComment = async function(commentId) {
-  this.comments = this.comments.filter(comment => comment._id.toString() !== commentId);
-  return this.save();
-};
 
 module.exports = mongoose.model("post", PostSchema);

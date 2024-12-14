@@ -1,39 +1,35 @@
 const router = require("express").Router();
 const postController = require("../controllers/post.controller");
+const uploadController = require("../controllers/upload.controller");
 const multer = require("multer");
 
 // Configuration de Multer pour les images
 const storage = multer.memoryStorage();
 const upload = multer({
-  storage,
+  storage: storage,
+  limits: {
+    fileSize: 500000 // 500Ko max
+  },
   fileFilter: (req, file, cb) => {
-    if (
-      file.mimetype === "image/jpeg" ||
-      file.mimetype === "image/png" ||
-      file.mimetype === "image/gif"
-    ) {
+    if (file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
-      cb(new Error("Format de fichier non autorisé (JPEG, PNG ou GIF uniquement)"), false);
+      cb(new Error("Format non supporté"), false);
     }
-  },
-  limits: {
-    fileSize: 10 * 1024 * 1024 // Limite de 10MB
   }
 });
 
-// Routes CRUD
+// Routes CRUD basiques
 router.get("/", postController.readPost);
-router.post("/", postController.createPost);
+router.post("/", upload.single("image"), postController.createPost);
 router.put("/:id", postController.updatePost);
 router.delete("/:id", postController.deletePost);
 
+// Route pour l'upload d'image séparé
+router.post("/upload/:id", upload.single("image"), uploadController.uploadPostImage);
 
-// Upload d'images
-router.post("/upload-image", upload.single("image"), postController.uploadImage);
-
-// Gestion des commentaires
-router.patch("/comment-post/:id", postController.commentPost);
-router.patch("/delete-comment-post/:id", postController.deleteCommentPost);
+// Routes pour les commentaires
+router.patch("/comment/:id", postController.commentPost);
+router.patch("/uncomment/:id", postController.deleteCommentPost);
 
 module.exports = router;
