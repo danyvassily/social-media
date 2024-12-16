@@ -8,28 +8,34 @@ const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 500000 // 500Ko max
+    fileSize: 3 * 1024 * 1024, // 3Mo max
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
+    if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Format non supporté"), false);
+      cb(
+        new Error(
+          "Format non supporté. Seuls les formats JPEG, JPG, PNG et GIF sont acceptés"
+        ),
+        false
+      );
     }
-  }
+  },
 });
 
 // Routes CRUD basiques
 router.get("/", postController.readPost);
-router.post("/", upload.single("image"), postController.createPost);
+router.post("/", upload.single("file"), postController.createPost);
 router.put("/:id", postController.updatePost);
 router.delete("/:id", postController.deletePost);
 
 // Route pour l'upload d'image séparé
-router.post("/upload/:id", upload.single("image"), uploadController.uploadPostImage);
-
-// Routes pour les commentaires
-router.patch("/comment/:id", postController.commentPost);
-router.patch("/uncomment/:id", postController.deleteCommentPost);
+router.post(
+  "/upload/:id",
+  upload.single("image"),
+  uploadController.uploadPostImage
+);
 
 module.exports = router;

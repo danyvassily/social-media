@@ -10,7 +10,9 @@ module.exports.getAllUsersDetails = async (req, res) => {
       .sort({ createdAt: -1 });
     res.status(200).json(users);
   } catch (err) {
-    res.status(400).json({ message: "Erreur lors de la récupération des utilisateurs" });
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération des utilisateurs"
+    });
   }
 };
 
@@ -21,9 +23,9 @@ module.exports.deleteUserAndPosts = async (req, res) => {
   }
 
   try {
-    const user = await UserModel.findById(req.params.id);
+    const userToDelete = await UserModel.findById(req.params.id);
     
-    if (!user) {
+    if (!userToDelete) {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
 
@@ -37,10 +39,8 @@ module.exports.deleteUserAndPosts = async (req, res) => {
       message: "Utilisateur et tous ses posts supprimés avec succès" 
     });
   } catch (err) {
-    console.log("Erreur détaillée:", err);
-    res.status(400).json({ 
-      message: "Erreur lors de la suppression de l'utilisateur et de ses posts",
-      error: err.message 
+    res.status(500).json({ 
+      message: "Erreur lors de la suppression de l'utilisateur et de ses posts"
     });
   }
 };
@@ -49,10 +49,13 @@ module.exports.deleteUserAndPosts = async (req, res) => {
 module.exports.getAllPosts = async (req, res) => {
   try {
     const posts = await PostModel.find()
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .populate("posterId", "email role");
     res.status(200).json(posts);
   } catch (err) {
-    res.status(400).json({ message: "Erreur lors de la récupération des posts" });
+    res.status(500).json({ 
+      message: "Erreur lors de la récupération des posts"
+    });
   }
 };
 
@@ -63,14 +66,18 @@ module.exports.deletePost = async (req, res) => {
   }
 
   try {
-    const post = await PostModel.findByIdAndDelete(req.params.id);
+    const post = await PostModel.findById(req.params.id)
+      .populate("posterId", "role");
     
     if (!post) {
       return res.status(404).json({ message: "Post non trouvé" });
     }
 
+    await post.deleteOne();
     res.status(200).json({ message: "Post supprimé avec succès" });
   } catch (err) {
-    res.status(400).json({ message: "Erreur lors de la suppression du post" });
+    res.status(500).json({ 
+      message: "Erreur lors de la suppression du post"
+    });
   }
 }; 

@@ -3,7 +3,7 @@ const authController = require("../controllers/auth.controller"); // Importation
 const userController = require("../controllers/user.controller"); // Importation du contrôleur utilisateur
 const multer = require("multer"); // Importation de Multer pour gérer les uploads (non utilisé ici)
 
-// Configuration de Multer pour les uploads d'images dans les commentaires (si nécessaire)
+// Configuration de Multer pour les uploads d'images
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 

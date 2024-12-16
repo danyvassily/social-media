@@ -23,23 +23,20 @@ module.exports.readPost = async (req, res) => {
 module.exports.createPost = async (req, res) => {
   try {
     let imagePath = "";
-    
+
     // Gérer l'upload d'image si présente
     if (req.file) {
       const fileName = `${req.body.posterId}-${Date.now()}.jpg`;
       imagePath = `/uploads/posts/${fileName}`;
-      
-      await fs.promises.writeFile(
-        `${UPLOAD_DIR}/${fileName}`,
-        req.file.buffer
-      );
+
+      await fs.promises.writeFile(`${UPLOAD_DIR}/${fileName}`, req.file.buffer);
     }
 
     // Créer le post
     const newPost = await PostModel.create({
       posterId: req.body.posterId,
       message: req.body.message,
-      picture: imagePath
+      picture: imagePath,
     });
 
     res.status(201).json(newPost);
@@ -71,7 +68,7 @@ module.exports.updatePost = async (req, res) => {
 module.exports.deletePost = async (req, res) => {
   try {
     const post = await PostModel.findById(req.params.id);
-    
+
     if (!post) {
       return res.status(404).json({ message: "Post introuvable" });
     }
@@ -88,57 +85,5 @@ module.exports.deletePost = async (req, res) => {
     res.status(200).json({ message: "Post supprimé" });
   } catch (err) {
     res.status(400).json({ message: "Impossible de supprimer le post" });
-  }
-};
-
-// Ajouter un commentaire
-module.exports.commentPost = async (req, res) => {
-  try {
-    const post = await PostModel.findByIdAndUpdate(
-      req.params.id,
-      {
-        $push: {
-          comments: {
-            commenterId: req.body.commenterId,
-            text: req.body.text,
-            timestamp: new Date().getTime()
-          }
-        }
-      },
-      { new: true }
-    );
-
-    if (!post) {
-      return res.status(404).json({ message: "Post introuvable" });
-    }
-
-    res.status(200).json(post);
-  } catch (err) {
-    res.status(400).json({ message: "Impossible d'ajouter le commentaire" });
-  }
-};
-
-// Supprimer un commentaire
-module.exports.deleteCommentPost = async (req, res) => {
-  try {
-    const post = await PostModel.findByIdAndUpdate(
-      req.params.id,
-      {
-        $pull: {
-          comments: {
-            _id: req.body.commentId
-          }
-        }
-      },
-      { new: true }
-    );
-
-    if (!post) {
-      return res.status(404).json({ message: "Post introuvable" });
-    }
-
-    res.status(200).json(post);
-  } catch (err) {
-    res.status(400).json({ message: "Impossible de supprimer le commentaire" });
   }
 };

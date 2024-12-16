@@ -6,35 +6,33 @@ const userSchema = new mongoose.Schema(
   {
     email: {
       type: String,
-      required: [true,],
+      required: true,
       validate: [isEmail, "Email invalide"],
       lowercase: true,
       unique: true,
-      trim: true
+      trim: true,
     },
     password: {
       type: String,
-      required: [true, "Le mot de passe est requis"],
-      minlength: [6, "au moins 6 caractères"],
-      maxlength: [1024, "Le mot de passe est trop long"]
+      required: true,
+      minlength: 6,
     },
     role: {
       type: String,
       enum: ["user", "admin"],
-      default: "user"
-    }
+      default: "user",
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 
 // Hash le mot de passe avant la sauvegarde
-userSchema.pre("save", async function(next) {
+userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
   }
-  
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -44,29 +42,32 @@ userSchema.pre("save", async function(next) {
   }
 });
 
-// Méthode pour vérifier le mot de passe
-userSchema.methods.comparePassword = async function(candidatePassword) {
+// Vérification du mot de passe
+userSchema.methods.comparePassword = async function (candidatePassword) {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
-    throw new Error("Erreur lors de la comparaison des mots de passe");
+    throw new Error("Erreur lors de la comparaison du mot de passe");
   }
 };
 
-// Méthode statique pour la connexion
-userSchema.statics.login = async function(email, password) {
-  const user = await this.findOne({ email });
-  
-  if (!user) {
-    throw new Error("Email non trouvé");
+// Méthode de connexion
+userSchema.statics.login = async function (email, password) {
+  try {
+    const user = await this.findOne({ email }).select("+password");
+    if (!user) {
+      throw new Error("Email non trouvé");
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      throw new Error("Mot de passe incorrect");
+    }
+
+    return user;
+  } catch (error) {
+    throw error;
   }
-  
-  const isValid = await user.comparePassword(password);
-  if (!isValid) {
-    throw new Error("Mot de passe incorrect");
-  }
-  
-  return user;
 };
 
 module.exports = mongoose.model("user", userSchema);

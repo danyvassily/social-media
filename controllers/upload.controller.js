@@ -16,7 +16,7 @@ Object.values(UPLOAD_DIRS).forEach(dir => {
 
 // Vérifier le type de fichier
 const isValidFileType = (mimetype) => {
-  return ["image/jpg", "image/jpeg", "image/png"].includes(mimetype);
+  return ["image/jpg", "image/jpeg", "image/png", "image/gif"].includes(mimetype);
 };
 
 // Upload d'image pour un post
@@ -27,11 +27,11 @@ module.exports.uploadPostImage = async (req, res) => {
     }
 
     if (!isValidFileType(req.file.mimetype)) {
-      return res.status(400).json({ message: "Format d'image non valide (JPG ou PNG uniquement)" });
+      return res.status(400).json({ message: "Format d'image non valide (JPG, PNG ou GIF uniquement)" });
     }
 
-    if (req.file.size > 500000) {
-      return res.status(400).json({ message: "Image trop volumineuse (max 500Ko)" });
+    if (req.file.size > 3 * 1024 * 1024) {
+      return res.status(400).json({ message: "Image trop volumineuse (max 3Mo)" });
     }
 
     const fileName = `post_${req.body.postId}_${Date.now()}.jpg`;
