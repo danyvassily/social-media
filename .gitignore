@@ -2,3 +2,4 @@
 /config/.env
 /client/public/uploads
 /coverage
+/jest.config.js
